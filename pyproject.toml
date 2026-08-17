@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "pinspect-cli"
 version = "1.0.0"
-description = "Fast Linux process-intelligence CLI tool that goes far beyond ps aux"
+description = "Fast Linux process-intelligence CLI and forensics tool that goes far beyond ps aux"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
@@ -23,6 +23,20 @@ keywords = [
     "edr",
     "siem",
     "system-monitoring",
+    "process-intelligence",
+    "process-tree",
+    "systemd",
+    "cgroups",
+    "namespaces",
+    "capabilities",
+    "pstree",
+    "lsof",
+    "terminal-ui",
+    "devops",
+    "sre",
+    "sysadmin",
+    "incident-response",
+    "secret-redaction",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -42,6 +56,8 @@ classifiers = [
     "Topic :: System :: Monitoring",
     "Topic :: System :: Systems Administration",
     "Topic :: Security",
+    "Topic :: Terminals",
+    "Topic :: Utilities",
 ]
 dependencies = [
     "rich>=12.0.0",
@@ -54,6 +70,7 @@ pinspect = "pinspect.cli.main:main"
 Homepage = "https://github.com/Baba01hacker666/pinspect"
 Repository = "https://github.com/Baba01hacker666/pinspect"
 Issues = "https://github.com/Baba01hacker666/pinspect/issues"
+Changelog = "https://github.com/Baba01hacker666/pinspect/releases"
 
 [tool.flit.module]
 name = "pinspect"
