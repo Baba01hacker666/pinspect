@@ -5,8 +5,9 @@ Unit tests for process tree and ancestry resolution.
 import os
 import tempfile
 import unittest
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
 
 
 class TestProcessTree(unittest.TestCase):

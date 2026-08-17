@@ -2,20 +2,22 @@
 Security intelligence collector (Linux capabilities, seccomp, NoNewPrivs, LSM, executable hashes, SUID).
 """
 
+import contextlib
+import hashlib
 import os
 import stat
-import hashlib
-from typing import Dict, Set, Optional, List, Any
-from pinspect.collector.procfs import ProcFS
+from typing import Dict, List, Optional, Set
+
 from pinspect.collector.namespaces import NamespaceCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.model.security import (
-    SecurityInfo,
     CapabilitySet,
     SeccompMode,
+    SecurityInfo,
     SecurityObservation,
 )
-from pinspect.utils.system import resolve_uid, resolve_gid
 from pinspect.utils.formatting import format_octal_mode
+from pinspect.utils.system import resolve_gid, resolve_uid
 
 # Linux Capabilities bit table (Linux kernel 6.x / POSIX cap definitions)
 CAPABILITY_NAMES = {
@@ -200,10 +202,8 @@ class SecurityCollector:
             st = os.stat(proc_exe_path)
         except (PermissionError, FileNotFoundError, OSError):
             if sec.exe_real_path and os.path.exists(sec.exe_real_path):
-                try:
+                with contextlib.suppress(OSError):
                     st = os.stat(sec.exe_real_path)
-                except OSError:
-                    pass
 
         if st:
             sec.exe_uid = st.st_uid

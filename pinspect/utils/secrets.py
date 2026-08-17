@@ -3,7 +3,7 @@ Secret detection and redaction utilities for environment variables.
 """
 
 import re
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 
 # Secret name patterns (case-insensitive substring or regex matches)
 SECRET_NAME_PATTERNS = [
@@ -49,29 +49,23 @@ SECRET_VALUE_PATTERNS = [
 
 def is_secret_name(key: str) -> bool:
     """Check if an environment variable key name matches secret patterns."""
-    for pattern in SECRET_NAME_PATTERNS:
-        if pattern.search(key):
-            return True
-    return False
+    return any(pattern.search(key) for pattern in SECRET_NAME_PATTERNS)
 
 
 def is_secret_value(value: str) -> bool:
     """Check if an environment variable value matches known token/secret patterns."""
     if not value or len(value) < 8:
         return False
-    for pattern in SECRET_VALUE_PATTERNS:
-        if pattern.search(value):
-            return True
-    return False
+    return any(pattern.search(value) for pattern in SECRET_VALUE_PATTERNS)
 
 
 def redact_value(key: str, value: str) -> str:
-    """Redact a secret value, optionally keeping a tiny prefix or mask."""
-    if not value:
-        return ""
-    if len(value) <= 6:
-        return "***REDACTED***"
-    # Show first 2 chars and last 2 chars for long keys if helpful, or clean mask
+    """Redact a secret value entirely.
+
+    The full value is always masked; key and value are accepted so the
+    masking strategy can evolve (e.g. keeping a partial prefix) without
+    changing callers.
+    """
     return "***REDACTED***"
 
 
@@ -83,9 +77,6 @@ def process_environ(raw_env: Dict[str, str], redact: bool = True) -> Dict[str, T
     processed: Dict[str, Tuple[str, bool]] = {}
     for k, v in raw_env.items():
         is_secret = is_secret_name(k) or is_secret_value(v)
-        if is_secret and redact:
-            display_val = redact_value(k, v)
-        else:
-            display_val = v
+        display_val = redact_value(k, v) if is_secret and redact else v
         processed[k] = (display_val, is_secret)
     return processed

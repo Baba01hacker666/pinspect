@@ -5,6 +5,7 @@ Unit tests for SecurityCollector (capabilities, seccomp, NoNewPrivs, observation
 import os
 import tempfile
 import unittest
+
 from pinspect.collector.procfs import ProcFS
 from pinspect.collector.security import (
     SecurityCollector,

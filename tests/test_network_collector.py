@@ -5,12 +5,13 @@ Unit tests for NetworkCollector parsing /proc/net files.
 import os
 import tempfile
 import unittest
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.network import (
     NetworkCollector,
     parse_ipv4_hex,
     parse_port_hex,
 )
+from pinspect.collector.procfs import ProcFS
 from pinspect.model.network import SocketProtocol, SocketState
 
 

@@ -8,18 +8,20 @@ import sys
 from typing import List, Optional
 
 from pinspect import __version__
-from pinspect.output.formatter import OutputDispatcher
-from pinspect.cli.commands.ps import handle_ps
-from pinspect.cli.commands.tree import handle_tree
-from pinspect.cli.commands.show import handle_show
-from pinspect.cli.commands.files import handle_files
-from pinspect.cli.commands.network import handle_network
-from pinspect.cli.commands.env import handle_env
 from pinspect.cli.commands.ancestry import handle_ancestry
 from pinspect.cli.commands.children import handle_children
+from pinspect.cli.commands.docker import handle_docker
+from pinspect.cli.commands.env import handle_env
+from pinspect.cli.commands.files import handle_files
+from pinspect.cli.commands.grep import handle_grep
 from pinspect.cli.commands.namespaces import handle_namespaces
+from pinspect.cli.commands.network import handle_network
+from pinspect.cli.commands.ps import handle_ps
 from pinspect.cli.commands.security import handle_security
+from pinspect.cli.commands.show import handle_show
+from pinspect.cli.commands.tree import handle_tree
 from pinspect.cli.commands.tui import handle_tui
+from pinspect.output.formatter import OutputDispatcher
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -106,8 +108,24 @@ def build_parser() -> argparse.ArgumentParser:
     sec_parser.add_argument("pid", type=int, help="Target process PID")
     sec_parser.add_argument("--no-hash", dest="compute_hash", action="store_false", default=True, help="Skip SHA-256 executable hashing")
 
-    # 11. 'tui' subcommand
-    tui_parser = subparsers.add_parser("tui", help="Launch interactive full-screen TUI explorer", parents=[common_parser])
+    # 11. 'grep' subcommand
+    grep_parser = subparsers.add_parser("grep", help="Grep running processes by name, arguments, executable, or user", parents=[common_parser])
+    grep_parser.add_argument("pattern", help="Regular expression to search for (case-insensitive)")
+    grep_parser.add_argument("-u", "--user", help="Restrict search to a username or UID")
+    grep_parser.add_argument("--name", action="store_true", help="Match pattern against process name only")
+    grep_parser.add_argument("--cmdline", action="store_true", help="Match pattern against command line / arguments only")
+    grep_parser.add_argument("--exe", action="store_true", help="Match pattern against executable path only")
+    grep_parser.add_argument("--limit", type=int, help="Limit number of results")
+
+    # 12. 'docker' subcommand
+    docker_parser = subparsers.add_parser("docker", help="List processes running inside containers (Docker, Podman, Kubernetes, etc.)", parents=[common_parser])
+    docker_parser.add_argument("--id", dest="container_id", help="Filter by container ID (prefix match)")
+    docker_parser.add_argument("--name", dest="container_name", help="Filter by container name")
+    docker_parser.add_argument("--runtime", dest="runtime_filter", help="Filter by container runtime (docker, podman, containerd, kubernetes, crio, lxc)")
+    docker_parser.add_argument("--limit", type=int, help="Limit number of results")
+
+    # 13. 'tui' subcommand
+    subparsers.add_parser("tui", help="Launch interactive full-screen TUI explorer", parents=[common_parser])
 
     return parser
 
@@ -127,6 +145,22 @@ def main(args: Optional[List[str]] = None) -> int:
     proc_root = getattr(parsed_args, "proc_root", "/proc")
     command = parsed_args.command
 
+    try:
+        return _run_command(command, parsed_args, dispatcher, proc_root)
+    except KeyboardInterrupt:
+        print("Interrupted.", file=sys.stderr)
+        return 130
+    except Exception as exc:
+        # Friendly error instead of a raw traceback; set PINSPECT_DEBUG=1 to
+        # re-raise and get the full traceback for bug reports.
+        if os.environ.get("PINSPECT_DEBUG"):
+            raise
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+
+def _run_command(command, parsed_args, dispatcher, proc_root):
+    """Dispatch a parsed subcommand to its handler."""
     # If no subcommand is passed, default to 'ps'
     if command is None:
         return handle_ps(
@@ -224,6 +258,28 @@ def main(args: Optional[List[str]] = None) -> int:
             pid=parsed_args.pid,
             proc_root=proc_root,
             compute_hash=parsed_args.compute_hash,
+            output_dispatcher=dispatcher,
+        )
+
+    elif command == "grep":
+        return handle_grep(
+            pattern=parsed_args.pattern,
+            proc_root=proc_root,
+            user_filter=parsed_args.user,
+            match_name=parsed_args.name,
+            match_cmdline=parsed_args.cmdline,
+            match_exe=parsed_args.exe,
+            limit=parsed_args.limit,
+            output_dispatcher=dispatcher,
+        )
+
+    elif command == "docker":
+        return handle_docker(
+            proc_root=proc_root,
+            container_id=parsed_args.container_id,
+            container_name=parsed_args.container_name,
+            runtime_filter=parsed_args.runtime_filter,
+            limit=parsed_args.limit,
             output_dispatcher=dispatcher,
         )
 

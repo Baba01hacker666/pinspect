@@ -2,11 +2,13 @@
 Integration tests for CLI subcommands (ps, show, tree, files, network, env, ancestry, children, namespaces, security).
 """
 
-import os
 import io
+import json
+import os
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+
 from pinspect.cli.main import main
 
 
@@ -135,6 +137,110 @@ class TestCLICommands(unittest.TestCase):
         output = f.getvalue()
         self.assertIn('"no_new_privs": false', output)
         self.assertIn('"seccomp_mode": 0', output)
+
+    def test_grep_by_name(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "100")
+
+    def test_grep_by_arguments(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "daemon off", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "100")
+
+    def test_grep_scope_flags(self):
+        # 'daemon' only appears in nginx's arguments, not its name
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "daemon", "--name", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "")
+
+    def test_grep_user_filter(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--user", "1000", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "")
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--user", "root", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "100")
+
+    def test_grep_json(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--json"])
+        self.assertEqual(rc, 0)
+        self.assertIn('"pid": 100', f.getvalue())
+
+    def test_grep_invalid_pattern(self):
+        rc = main(["--proc-root", self.proc_root, "grep", "["])
+        self.assertEqual(rc, 1)
+
+    def test_docker_command(self):
+        # PID 200 runs inside a Docker container; nginx (100) does not
+        docker_cgroup = "0::/docker/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n"
+        self._make_proc(200, 100, "myapp", b"myapp\x00--serve\x00", docker_cgroup)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker", "--json"])
+        self.assertEqual(rc, 0)
+        output = f.getvalue()
+        self.assertIn('"pid": 200', output)
+        self.assertIn('"container_runtime": "Docker"', output)
+        self.assertIn('"container_id": "0123456789ab"', output)
+        # Only the containerized process is listed (nginx PID 100 is not)
+        data = json.loads(output)
+        self.assertEqual([p["pid"] for p in data], [200])
+
+    def test_docker_quiet_and_filters(self):
+        docker_cgroup = "0::/docker/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n"
+        self._make_proc(200, 100, "myapp", b"myapp\x00--serve\x00", docker_cgroup)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "200")
+
+        # Prefix filter that does not match
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker", "--id", "ffff", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "")
+
+        # Runtime filter
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker", "--runtime", "docker", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "200")
+
+    def test_docker_grouped_view(self):
+        # Two processes in the same container; nginx (100) is a host process
+        docker_cgroup = "0::/docker/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n"
+        self._make_proc(200, 100, "myapp", b"myapp\x00--serve\x00", docker_cgroup)
+        self._make_proc(201, 200, "helper", b"helper\x00-x\x00", docker_cgroup)
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker"])
+        self.assertEqual(rc, 0)
+        output = f.getvalue()
+        self.assertIn("Containerized Processes", output)
+        self.assertIn("myapp --serve", output)
+        self.assertIn("helper -x", output)
+        # Host process must not appear in the container view
+        self.assertNotIn("nginx -g", output)
 
 
 if __name__ == "__main__":

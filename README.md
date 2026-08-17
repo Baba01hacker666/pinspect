@@ -41,6 +41,8 @@ pip install -e .
 - **Security & Privilege Forensics**: Decodes 64-bit Linux capability bitmasks (`CapEff`, `CapPrm`, `CapInh`, `CapBnd`, `CapAmb`) to named capabilities (`CAP_SYS_ADMIN`, `CAP_NET_RAW`), checks `NoNewPrivs`, Seccomp filters, AppArmor/SELinux contexts, SetUID/SetGID bits, executable SHA-256 hashes, and unlinked binary execution (`(deleted)` executables & memory mappings).
 - **Files & Sockets**: Inspects open file descriptors, target classification (regular files, pipes, unix sockets, network sockets, anon inodes), permissions, file size, deleted files held in memory, and system-wide/per-PID network connections.
 - **Secret Redaction**: `pinspect env` automatically discovers and masks sensitive secrets and credentials (`*_TOKEN`, `*_KEY`, `*_SECRET`, `*_PASSWORD`, `AWS_*`, `DATABASE_URL`, JWT tokens, and private keys).
+- **Built-in Grep**: `pinspect grep` searches running processes like grep — by program name, command-line arguments, executable path, or user — with highlighted matches and relevance-ranked results (name matches first).
+- **Container Process View**: `pinspect docker` lists only processes running inside containers (Docker, Podman, Kubernetes, CRI-O, LXC) with container ID, runtime, and name.
 - **Process Hierarchy Tree**: Visualizes process trees with color-coded states, CPU/memory stats, container badges, and ancestry lineages.
 - **Interactive TUI**: Built-in interactive dashboard with live filtering, sortable columns, and detailed multi-tab views.
 - **SIEM / EDR Formats**: Structured JSON output (`--json`), CSV export (`--csv`), wide (`--wide`), and quiet mode (`--quiet`).
@@ -162,7 +164,44 @@ Inspects Linux capabilities, Seccomp, NoNewPrivs, LSM, and file integrity:
 pinspect security 14847
 ```
 
-### 10. Interactive TUI Mode (`pinspect tui`)
+### 10. Grep Processes (`pinspect grep <pattern>`)
+Searches running processes like grep — by program name, arguments, executable, or user. Matches are highlighted and name matches are ranked first:
+```bash
+# Search by tool / program name or arguments (name + args + exe by default)
+pinspect grep nginx
+pinspect grep "daemon off"
+
+# Restrict search to specific fields
+pinspect grep python --name
+pinspect grep "--debug" --cmdline
+pinspect grep /usr/bin/ --exe
+
+# Restrict by user
+pinspect grep java --user 1000
+
+# Machine-readable output
+pinspect grep nginx --json
+pinspect grep nginx --quiet
+```
+
+### 11. Containerized Processes Only (`pinspect docker`)
+Lists processes running inside containers, with container ID, runtime, and name. Non-container processes are excluded:
+```bash
+# All containerized processes
+pinspect docker
+
+# Filter by container ID prefix, name, or runtime
+pinspect docker --id 0abc123
+pinspect docker --name my-app
+pinspect docker --runtime podman
+pinspect docker --limit 20
+
+# SIEM / EDR output
+pinspect docker --json
+pinspect docker --quiet
+```
+
+### 12. Interactive TUI Mode (`pinspect tui`)
 Launches full-screen interactive dashboard:
 ```bash
 pinspect tui

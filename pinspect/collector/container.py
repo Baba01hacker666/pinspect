@@ -3,7 +3,7 @@ Container runtime, orchestrator (Docker, Podman, Kubernetes, LXC, CRI-O), and cg
 """
 
 import re
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class ContainerCollector:
@@ -103,9 +103,8 @@ class ContainerCollector:
             return result
 
         # Check root link for proot / container root mounts
-        if root_link and root_link != "/":
-            if "proot" in root_link or "rootfs" in root_link or "docker" in root_link:
-                result["is_container"] = True
-                result["container_runtime"] = "Container/RootFS Isolation"
+        if root_link and root_link != "/" and ("proot" in root_link or "rootfs" in root_link or "docker" in root_link):
+            result["is_container"] = True
+            result["container_runtime"] = "Container/RootFS Isolation"
 
         return result

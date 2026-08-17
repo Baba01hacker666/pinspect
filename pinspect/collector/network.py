@@ -3,17 +3,17 @@ Network socket collector parsing /proc/net/tcp, tcp6, udp, udp6, and unix.
 Maps network and unix domain sockets to processes and file descriptors.
 """
 
-import os
 import socket
 import struct
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple
+
 from pinspect.collector.procfs import ProcFS
 from pinspect.model.network import (
+    NetworkSummary,
+    SocketFamily,
     SocketInfo,
     SocketProtocol,
-    SocketFamily,
     SocketState,
-    NetworkSummary,
 )
 from pinspect.utils.system import resolve_uid
 

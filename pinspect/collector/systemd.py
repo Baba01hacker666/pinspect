@@ -4,18 +4,18 @@ Systemd unit and service manager intelligence collector.
 
 import os
 import re
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple
 
 
 class SystemdCollector:
     """Extracts systemd unit, slice, and service manager information."""
 
-    SYSTEMD_UNIT_PATHS = [
+    SYSTEMD_UNIT_PATHS = (
         "/etc/systemd/system",
         "/usr/lib/systemd/system",
         "/lib/systemd/system",
         "/run/systemd/system",
-    ]
+    )
 
     @staticmethod
     def extract_unit_and_slice(cgroup_content: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:

@@ -2,15 +2,16 @@
 Filesystem, file descriptors, and deleted-file collector.
 """
 
+import contextlib
 import os
-import stat
 import re
-from typing import List, Dict, Optional, Tuple
+from typing import List, Optional, Set, Tuple
+
 from pinspect.collector.procfs import ProcFS
 from pinspect.model.filesystem import (
-    FileDescriptorInfo,
-    FDType,
     DeletedFileInfo,
+    FDType,
+    FileDescriptorInfo,
     MountInfo,
 )
 
@@ -26,6 +27,10 @@ class FilesystemCollector:
         fd_entries = self.procfs.list_dir(pid, "fd")
         results: List[FileDescriptorInfo] = []
 
+        # Socket fds are symlinks like "socket:[inode]" for both inet and unix
+        # sockets; /proc/net/unix tells us which inodes belong to unix sockets.
+        unix_inodes = self._collect_unix_inodes()
+
         for fd_str in fd_entries:
             if not fd_str.isdigit():
                 continue
@@ -34,7 +39,7 @@ class FilesystemCollector:
             if not target:
                 continue
 
-            fd_type, is_deleted, clean_path, inode = self._classify_target(target)
+            fd_type, is_deleted, clean_path, inode = self._classify_target(target, unix_inodes)
             
             # Read fdinfo for pos & flags
             pos, flags, mode = self._parse_fdinfo(pid, fd_str)
@@ -144,7 +149,25 @@ class FilesystemCollector:
 
         return mounts
 
-    def _classify_target(self, target: str) -> Tuple[FDType, bool, str, Optional[int]]:
+    def _collect_unix_inodes(self) -> Set[int]:
+        """Collect inode numbers of unix domain sockets from /proc/net/unix."""
+        inodes: Set[int] = set()
+        lines = self.procfs.read_lines("net", "unix")
+        # Header: Num RefCount Protocol Flags Type St Inode Path
+        for line in lines[1:]:
+            parts = line.split()
+            if len(parts) >= 7:
+                try:
+                    inodes.add(int(parts[6]))
+                except ValueError:
+                    continue
+        return inodes
+
+    def _classify_target(
+        self,
+        target: str,
+        unix_inodes: Optional[Set[int]] = None,
+    ) -> Tuple[FDType, bool, str, Optional[int]]:
         """Classify target string into FDType, is_deleted, clean_path, inode."""
         is_deleted = False
         clean_path = target
@@ -164,14 +187,14 @@ class FilesystemCollector:
             match = re.search(r"socket:\[([0-9]+)\]", clean_path)
             if match:
                 inode = int(match.group(1))
+                if unix_inodes and inode in unix_inodes:
+                    return (FDType.UNIX_SOCKET, is_deleted, clean_path, inode)
             return (FDType.INET_SOCKET, is_deleted, clean_path, inode)
 
         elif clean_path.startswith("anon_inode:"):
             return (FDType.ANON_INODE, is_deleted, clean_path, None)
 
         elif clean_path.startswith("/dev/"):
-            if "pts" in clean_path or "tty" in clean_path or "null" in clean_path or "zero" in clean_path:
-                return (FDType.CHAR_DEV, is_deleted, clean_path, None)
             return (FDType.CHAR_DEV, is_deleted, clean_path, None)
 
         elif is_deleted:
@@ -191,10 +214,8 @@ class FilesystemCollector:
 
         for line in lines:
             if line.startswith("pos:"):
-                try:
+                with contextlib.suppress(ValueError):
                     pos = int(line.split(":")[1].strip())
-                except ValueError:
-                    pass
             elif line.startswith("flags:"):
                 try:
                     flags_str = line.split(":")[1].strip()

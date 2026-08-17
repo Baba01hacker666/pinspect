@@ -3,8 +3,9 @@
 """
 
 from typing import Optional
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.namespaces import NamespaceCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.table import render_namespace_table
 from pinspect.ui.theme import console

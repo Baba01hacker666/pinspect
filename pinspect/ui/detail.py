@@ -2,29 +2,20 @@
 Deep, actionable detailed process inspection view (pinspect show <PID>).
 """
 
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich.columns import Columns
-from rich.layout import Layout
 
 from pinspect.model.process import ProcessInfo
 from pinspect.model.security import SecurityInfo
 from pinspect.ui.theme import (
-    console,
     Theme,
-    COLOR_PID,
-    COLOR_USER,
-    COLOR_HEADER,
-    COLOR_WARN,
-    COLOR_ALERT,
+    console,
 )
 from pinspect.utils.formatting import (
     format_bytes,
-    format_percent,
-    format_duration,
-    truncate_str,
 )
 
 
@@ -132,7 +123,7 @@ def render_process_detail(
         sec_table.add_column("Details", style="white")
 
         # Capabilities
-        eff_caps = sorted(list(security.capabilities.effective))
+        eff_caps = sorted(security.capabilities.effective)
         if eff_caps:
             sec_table.add_row("Effective Capabilities:", f"[bold yellow]{', '.join(eff_caps)}[/bold yellow]")
         else:
@@ -179,7 +170,7 @@ def render_process_detail(
     if pinfo.ancestry:
         ancestry_text = Text()
         chain_rev = list(reversed(pinfo.ancestry))
-        for idx, node in enumerate(chain_rev):
+        for node in chain_rev:
             ancestry_text.append(f"PID {node.pid} ({node.name})", style="cyan")
             ancestry_text.append(" ──▶ ", style="dim")
         ancestry_text.append(f"PID {pinfo.pid} ({pinfo.name})", style="bold white on blue")

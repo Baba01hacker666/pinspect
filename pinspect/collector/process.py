@@ -3,40 +3,39 @@ Process collector aggregating procfs metadata into ProcessInfo models.
 """
 
 import os
-import re
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
-from pinspect.collector.procfs import ProcFS
-from pinspect.collector.systemd import SystemdCollector
 from pinspect.collector.container import ContainerCollector
-from pinspect.collector.security import SecurityCollector
-from pinspect.collector.namespaces import NamespaceCollector
 from pinspect.collector.filesystem import FilesystemCollector
+from pinspect.collector.namespaces import NamespaceCollector
 from pinspect.collector.network import NetworkCollector
+from pinspect.collector.procfs import ProcFS
+from pinspect.collector.security import SecurityCollector
+from pinspect.collector.systemd import SystemdCollector
 from pinspect.model.process import (
+    CgroupInfo,
+    CPUStats,
+    CredentialInfo,
+    LimitsInfo,
+    MemoryStats,
+    ProcessAncestryNode,
     ProcessInfo,
     ProcessOrigin,
     ProcessState,
-    MemoryStats,
-    CPUStats,
-    CredentialInfo,
-    CgroupInfo,
-    LimitsInfo,
-    ProcessAncestryNode,
 )
+from pinspect.utils.formatting import format_duration, format_timestamp
 from pinspect.utils.system import (
-    get_uptime,
     get_clock_ticks,
     get_page_size,
     get_total_memory,
-    resolve_uid,
+    get_uptime,
     resolve_gid,
-    resolve_tty,
     resolve_sched_policy,
+    resolve_tty,
+    resolve_uid,
 )
-from pinspect.utils.formatting import format_duration, format_timestamp
 
 
 class ProcessCollector:
@@ -84,6 +83,34 @@ class ProcessCollector:
 
         return valid_procs
 
+    def collect_process_with_ancestry(self, pid: int, deep: bool = True) -> Optional[ProcessInfo]:
+        """
+        Collect a single process plus its ancestor chain without scanning all PIDs.
+
+        Unlike collect_all_processes(), this only reads /proc for the target and its
+        direct ancestors, which is far cheaper for single-PID commands on busy hosts.
+        Returns None if the target process doesn't exist.
+        """
+        pinfo = self.collect_process(pid, deep=deep)
+        if pinfo is None:
+            return None
+
+        proc_by_pid: Dict[int, ProcessInfo] = {pid: pinfo}
+        curr = pinfo
+        seen = {pid}
+        while curr and curr.ppid > 0 and curr.ppid not in seen:
+            seen.add(curr.ppid)
+            parent = self.collect_process(curr.ppid, deep=False)
+            if parent is None:
+                break
+            parent.children.append(curr.pid)
+            parent.children_names.append(curr.name)
+            proc_by_pid[parent.pid] = parent
+            curr = parent
+
+        self._resolve_ancestry_and_origin(pinfo, proc_by_pid)
+        return pinfo
+
     def collect_process(self, pid: int, deep: bool = True) -> Optional[ProcessInfo]:
         """
         Collect process details for a single PID safely.
@@ -115,10 +142,9 @@ class ProcessCollector:
 
         is_deleted_exe = False
         resolved_exe = exe_link
-        if exe_link:
-            if exe_link.endswith(" (deleted)"):
-                is_deleted_exe = True
-                resolved_exe = exe_link[:-10]
+        if exe_link and exe_link.endswith(" (deleted)"):
+            is_deleted_exe = True
+            resolved_exe = exe_link[:-10]
 
         is_chroot = bool(root_link and root_link != "/")
 

@@ -4,7 +4,7 @@ Process data models representing Linux process metadata.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class ProcessState(Enum):
@@ -14,10 +14,9 @@ class ProcessState(Enum):
     ZOMBIE = "Z"
     STOPPED = "T"
     TRACED = "t"
-    PAGING = "W"
+    PAGING = "W"  # 'W' is legacy Paging; kernels 2.6.33-3.13 reused it for Waking
     DEAD = "X"
     WAKEKILL = "K"
-    WAKING = "W"
     PARKED = "P"
     IDLE = "I"
     UNKNOWN = "?"
@@ -31,10 +30,9 @@ class ProcessState(Enum):
             ProcessState.ZOMBIE: "Zombie",
             ProcessState.STOPPED: "Stopped",
             ProcessState.TRACED: "Tracing Stop",
-            ProcessState.PAGING: "Paging",
+            ProcessState.PAGING: "Paging/Waking",
             ProcessState.DEAD: "Dead",
             ProcessState.WAKEKILL: "Wakekill",
-            ProcessState.WAKING: "Waking",
             ProcessState.PARKED: "Parked",
             ProcessState.IDLE: "Idle Kernel Thread",
             ProcessState.UNKNOWN: "Unknown",

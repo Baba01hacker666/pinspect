@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "pinspect-cli"
-version = "1.0.0"
+version = "1.0.2"
 description = "Fast Linux process-intelligence CLI and forensics tool that goes far beyond ps aux"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -74,3 +74,25 @@ Changelog = "https://github.com/Baba01hacker666/pinspect/releases"
 
 [tool.flit.module]
 name = "pinspect"
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E4", "E7", "E9",  # pycodestyle errors
+    "F",                # pyflakes
+    "I",                # isort
+    "UP",               # pyupgrade (py38-aware)
+    "B",                # flake8-bugbear
+    "C4",               # flake8-comprehensions
+    "SIM",              # flake8-simplify
+    "RUF",              # ruff-specific
+]
+ignore = [
+    "BLE001",  # broad excepts are intentional: graceful recovery on /proc read errors
+    "S110",    # best-effort reads intentionally swallow errors
+    "DTZ006",  # naive local timestamps are fine for CLI display
+    "FA100",   # typing.List/Dict/etc. required for Python 3.8 (pre-PEP 585)
+]

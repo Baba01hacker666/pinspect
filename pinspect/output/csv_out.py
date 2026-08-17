@@ -4,11 +4,11 @@ CSV exporter for process listings, open files, network sockets, and namespaces.
 
 import csv
 import io
-from typing import List, Any
-from pinspect.model.process import ProcessInfo
+from typing import List
+
 from pinspect.model.filesystem import FileDescriptorInfo
 from pinspect.model.network import SocketInfo
-from pinspect.model.security import NamespaceInfo
+from pinspect.model.process import ProcessInfo
 
 
 def export_processes_csv(processes: List[ProcessInfo]) -> str:

@@ -4,7 +4,7 @@ Supports custom procfs root directories for testing and mock data.
 """
 
 import os
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union
 
 
 class ProcFS:
@@ -45,7 +45,7 @@ class ProcFS:
         """Safely read lines from a proc file."""
         target_path = self.path(*parts)
         try:
-            with open(target_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(target_path, encoding="utf-8", errors="replace") as f:
                 return [line.rstrip("\r\n") for line in f]
         except (PermissionError, FileNotFoundError, ProcessLookupError, IsADirectoryError, OSError):
             return []

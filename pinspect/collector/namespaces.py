@@ -4,7 +4,8 @@ Linux namespace collector (/proc/<pid>/ns).
 
 import os
 import re
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
+
 from pinspect.collector.procfs import ProcFS
 from pinspect.model.security import NamespaceInfo
 
@@ -58,7 +59,6 @@ class NamespaceCollector:
         host_ns = self.get_host_namespaces() if compare_with_host else {}
         results: Dict[str, NamespaceInfo] = {}
 
-        ns_dir = self.procfs.path(pid, "ns")
         if not self.procfs.is_dir(pid, "ns"):
             return results
 
@@ -76,11 +76,13 @@ class NamespaceCollector:
                 if st:
                     inode = st.st_ino
 
-            is_isolated = False
-            if compare_with_host and entry in host_ns and inode is not None:
-                # If host namespace inode exists and differs, it is isolated
-                if host_ns[entry] != inode:
-                    is_isolated = True
+            # If host namespace inode exists and differs, it is isolated
+            is_isolated = (
+                compare_with_host
+                and entry in host_ns
+                and inode is not None
+                and host_ns[entry] != inode
+            )
 
             results[entry] = NamespaceInfo(
                 ns_type=entry,

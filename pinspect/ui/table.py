@@ -2,21 +2,42 @@
 Rich table renderers for processes, file descriptors, network sockets, and namespaces.
 """
 
-from typing import List, Dict, Optional
+import re
+from typing import Any, Dict, List, Optional
+
 from rich.table import Table
 from rich.text import Text
-from pinspect.model.process import ProcessInfo
-from pinspect.model.filesystem import FileDescriptorInfo, FDType
+from rich.tree import Tree
+
+from pinspect.model.filesystem import FDType, FileDescriptorInfo
 from pinspect.model.network import SocketInfo
+from pinspect.model.process import ProcessInfo
 from pinspect.model.security import NamespaceInfo
-from pinspect.ui.theme import console, Theme, COLOR_HEADER
-from pinspect.utils.formatting import format_bytes, format_percent, truncate_str
+from pinspect.ui.theme import COLOR_HEADER, Theme, console
+from pinspect.utils.formatting import format_bytes
+
+
+def _append_with_highlight(text: Text, value: str, pattern: str, base_style: str = "white") -> None:
+    """Append a string to a rich Text, highlighting regex matches."""
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error:
+        text.append(value, style=base_style)
+        return
+
+    last = 0
+    for match in regex.finditer(value):
+        text.append(value[last : match.start()], style=base_style)
+        text.append(match.group(0), style="bold yellow on grey19")
+        last = match.end()
+    text.append(value[last:], style=base_style)
 
 
 def render_process_table(
     processes: List[ProcessInfo],
     wide: bool = False,
     title: Optional[str] = None,
+    highlight_pattern: Optional[str] = None,
 ) -> None:
     """Render a clean, high-density process table."""
     table = Table(
@@ -85,11 +106,13 @@ def render_process_table(
         cmd_text = Text()
         if p.is_deleted_exe:
             cmd_text.append("[DELETED] ", style="bold red")
-        
-        if wide:
-            cmd_text.append(p.cmdline or p.name, style="white" if p.pid != 0 else "dim")
+
+        raw_cmd = p.cmdline or p.name
+        base_cmd_style = "white" if p.pid != 0 else "dim"
+        if highlight_pattern:
+            _append_with_highlight(cmd_text, raw_cmd, highlight_pattern, base_style=base_cmd_style)
         else:
-            cmd_text.append(p.cmdline or p.name, style="white" if p.pid != 0 else "dim")
+            cmd_text.append(raw_cmd, style=base_cmd_style)
 
         table.add_row(
             str(p.pid),
@@ -105,6 +128,51 @@ def render_process_table(
         )
 
     console.print(table)
+
+
+def render_container_tree(groups: List[Any], wide: bool = False) -> None:
+    """Render containerized processes grouped by container, with per-container details."""
+    tree = Tree("📦 [bold]Containerized Processes[/bold]")
+
+    for group in groups:
+        header = Text()
+        header.append(f"📦 {group.container_id[:12]} ", style="bold cyan")
+        if group.container_name:
+            header.append(f"{group.container_name} ", style="bold white")
+        if group.container_runtime:
+            header.append(f"({group.container_runtime}) ", style="bright_blue")
+        if group.container_image:
+            header.append(f"image: {group.container_image}", style="dim")
+        node = tree.add(header)
+
+        if group.container_networks:
+            node.add(Text(f"🌐 IP: {', '.join(group.container_networks)}", style="green"))
+        if group.container_mounts:
+            shown = group.container_mounts[:3]
+            mounts_txt = ", ".join(shown)
+            extra = len(group.container_mounts) - len(shown)
+            if extra > 0:
+                mounts_txt += f" (+{extra} more)"
+            node.add(Text(f"📂 mounts: {mounts_txt}", style="yellow"))
+        if group.kubernetes_namespace:
+            node.add(Text(f"☸️ namespace: {group.kubernetes_namespace}", style="magenta"))
+
+        for p in group.processes:
+            line = Text()
+            line.append(f"PID {p.pid:<7}", style="cyan")
+            line.append(f"{p.creds.user:<12}", style="green")
+            if p.is_deleted_exe:
+                line.append("[DELETED] ", style="bold red")
+            cmd = p.cmdline or p.name
+            if not wide and len(cmd) > 100:
+                cmd = cmd[:100] + "…"
+            line.append(cmd, style="white")
+            node.add(line)
+
+        if not group.processes:
+            node.add(Text("(no processes)", style="dim"))
+
+    console.print(tree)
 
 
 def render_files_table(

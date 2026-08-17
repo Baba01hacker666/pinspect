@@ -4,13 +4,13 @@
 
 import re
 from typing import List, Optional
-from pinspect.collector.procfs import ProcFS
-from pinspect.collector.process import ProcessCollector
+
 from pinspect.collector.network import NetworkCollector
+from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.model.process import ProcessInfo
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.table import render_process_table
-from pinspect.ui.theme import console
 
 
 def handle_ps(
@@ -59,17 +59,14 @@ def handle_ps(
                 if user_filter.lower() not in p.creds.user.lower():
                     continue
 
-        if name_filter:
-            if not re.search(name_filter, p.name, re.IGNORECASE):
-                continue
+        if name_filter and not re.search(name_filter, p.name, re.IGNORECASE):
+            continue
 
-        if cmd_filter:
-            if not re.search(cmd_filter, p.cmdline, re.IGNORECASE):
-                continue
+        if cmd_filter and not re.search(cmd_filter, p.cmdline, re.IGNORECASE):
+            continue
 
-        if state_filter:
-            if p.state_char.upper() != state_filter.upper():
-                continue
+        if state_filter and p.state_char.upper() != state_filter.upper():
+            continue
 
         if service_filter:
             srv = p.origin.service_name or ""

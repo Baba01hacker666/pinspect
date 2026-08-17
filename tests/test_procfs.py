@@ -5,6 +5,7 @@ Unit tests for safe low-level ProcFS accessor.
 import os
 import tempfile
 import unittest
+
 from pinspect.collector.procfs import ProcFS
 
 

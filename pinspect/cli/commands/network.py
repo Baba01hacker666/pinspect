@@ -2,13 +2,12 @@
 'pinspect network [PID]' command implementation.
 """
 
-from typing import Optional, List
-from pinspect.collector.procfs import ProcFS
+from typing import Optional
+
 from pinspect.collector.network import NetworkCollector
-from pinspect.model.network import SocketInfo
+from pinspect.collector.procfs import ProcFS
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.table import render_network_table
-from pinspect.ui.theme import console
 
 
 def handle_network(

@@ -5,9 +5,9 @@ Unit tests for ProcessCollector using mock procfs trees.
 import os
 import tempfile
 import unittest
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.process import ProcessCollector
-from pinspect.model.process import ProcessState
+from pinspect.collector.procfs import ProcFS
 
 
 class TestProcessCollector(unittest.TestCase):

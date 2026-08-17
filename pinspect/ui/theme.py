@@ -2,9 +2,8 @@
 Theme, colors, and styling tokens for pinspect terminal UI.
 """
 
-from rich.style import Style
-from rich.theme import Theme as RichTheme
 from rich.console import Console
+from rich.theme import Theme as RichTheme
 
 # High-legibility color palette
 COLOR_PID = "bold cyan"

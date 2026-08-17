@@ -4,7 +4,7 @@ Security metadata and observations data models.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict, Optional, Set
+from typing import Dict, List, Optional, Set
 
 
 class SeccompMode(Enum):

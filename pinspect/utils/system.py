@@ -2,11 +2,11 @@
 System utilities for reading kernel parameters, resolving users, groups, and device numbers.
 """
 
+import grp
 import os
 import pwd
-import grp
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 _UID_CACHE: Dict[int, str] = {}
 _GID_CACHE: Dict[int, str] = {}
@@ -39,7 +39,7 @@ def get_uptime(proc_root: str = "/proc") -> float:
     
     uptime_path = os.path.join(proc_root, "uptime")
     try:
-        with open(uptime_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(uptime_path, encoding="utf-8", errors="ignore") as f:
             line = f.readline().strip()
             if line:
                 val = float(line.split()[0])
@@ -60,7 +60,7 @@ def get_total_memory(proc_root: str = "/proc") -> int:
     
     meminfo_path = os.path.join(proc_root, "meminfo")
     try:
-        with open(meminfo_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(meminfo_path, encoding="utf-8", errors="ignore") as f:
             for line in f:
                 if line.startswith("MemTotal:"):
                     parts = line.split()
@@ -109,20 +109,11 @@ def resolve_tty(tty_nr: int) -> str:
     minor = (tty_nr & 0xFF) | ((tty_nr >> 12) & 0xFFF00)
     
     if major == 4:
-        if minor < 64:
-            return f"tty{minor}"
-        else:
-            return f"ttyS{minor - 64}"
-    elif major == 136 or (136 <= major <= 143):
-        pts_minor = (major - 136) * 256 + minor
-        return f"pts/{pts_minor}"
-    elif major == 5:
-        if minor == 0:
-            return "tty"
-        elif minor == 1:
-            return "console"
-        elif minor == 2:
-            return "ptmx"
+        return f"tty{minor}" if minor < 64 else f"ttyS{minor - 64}"
+    if 136 <= major <= 143:
+        return f"pts/{(major - 136) * 256 + minor}"
+    if major == 5:
+        return {0: "tty", 1: "console", 2: "ptmx"}.get(minor, f"dev(5,{minor})")
     return f"dev({major},{minor})"
 
 

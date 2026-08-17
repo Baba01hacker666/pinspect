@@ -3,6 +3,7 @@
 """
 
 from typing import Optional
+
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -10,7 +11,7 @@ from rich.text import Text
 from pinspect.collector.procfs import ProcFS
 from pinspect.collector.security import SecurityCollector
 from pinspect.output.formatter import OutputDispatcher
-from pinspect.ui.theme import console, COLOR_HEADER
+from pinspect.ui.theme import console
 
 
 def handle_security(
@@ -37,10 +38,10 @@ def handle_security(
         table.add_column("Value", style="white")
 
         # Capabilities
-        eff = sorted(list(security.capabilities.effective))
+        eff = sorted(security.capabilities.effective)
         table.add_row("Effective Capabilities:", f"[bold yellow]{', '.join(eff)}[/bold yellow]" if eff else "[dim]None (Unprivileged)[/dim]")
         
-        prm = sorted(list(security.capabilities.permitted))
+        prm = sorted(security.capabilities.permitted)
         table.add_row("Permitted Capabilities:", f"{', '.join(prm)}" if prm else "[dim]None[/dim]")
 
         table.add_row("Bounding Set Count:", str(len(security.capabilities.bounding)))

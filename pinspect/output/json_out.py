@@ -3,9 +3,9 @@ SIEM/EDR structured JSON serialization.
 """
 
 import json
-from dataclasses import is_dataclass, asdict
+from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Union
+from typing import Any
 
 
 class EDRJSONEncoder(json.JSONEncoder):
@@ -15,7 +15,7 @@ class EDRJSONEncoder(json.JSONEncoder):
         if isinstance(obj, Enum):
             return obj.value
         elif isinstance(obj, set):
-            return sorted(list(obj))
+            return sorted(obj)
         elif is_dataclass(obj):
             return asdict(obj)
         elif hasattr(obj, "__dict__"):

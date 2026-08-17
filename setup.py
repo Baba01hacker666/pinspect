@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pinspect-cli",
-    version="1.0.0",
+    version="1.0.2",
     description="Fast Linux process-intelligence CLI and forensics tool that goes far beyond ps aux",
     author="Baba01hacker666",
     packages=find_packages(include=["pinspect", "pinspect.*"]),

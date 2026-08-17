@@ -2,18 +2,18 @@
 Interactive Terminal User Interface (TUI) for process exploration.
 """
 
+import contextlib
 import curses
-import os
 import time
-from typing import List, Optional, Dict, Any
+from typing import Any, List
 
-from pinspect.collector.procfs import ProcFS
-from pinspect.collector.process import ProcessCollector
 from pinspect.collector.filesystem import FilesystemCollector
 from pinspect.collector.network import NetworkCollector
+from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.collector.security import SecurityCollector
+from pinspect.utils.formatting import format_bytes
 from pinspect.utils.secrets import process_environ
-from pinspect.utils.formatting import format_bytes, format_duration
 
 
 class InteractiveTUI:
@@ -41,10 +41,8 @@ class InteractiveTUI:
 
     def run(self) -> None:
         """Run the interactive curses TUI."""
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             curses.wrapper(self._main_loop)
-        except KeyboardInterrupt:
-            pass
 
     def _refresh_processes(self) -> None:
         """Reload processes from procfs."""
@@ -316,7 +314,7 @@ class InteractiveTUI:
             content_lines.append(f" NoNewPrivs:       {'Enabled' if sec.no_new_privs else 'Disabled'}")
             content_lines.append(f" Seccomp Mode:     {sec.seccomp_mode.label}")
             content_lines.append(f" LSM Profile:      {sec.apparmor_profile or sec.selinux_context or 'None / Unconfined'}")
-            eff_caps = ", ".join(sorted(list(sec.capabilities.effective))) or "None (Unprivileged)"
+            eff_caps = ", ".join(sorted(sec.capabilities.effective)) or "None (Unprivileged)"
             content_lines.append(f" Effective Caps:   {eff_caps}")
             if sec.exe_owner:
                 content_lines.append(f" Binary Owner:     {sec.exe_owner}:{sec.exe_group} ({sec.exe_mode_octal}) {'[SUID]' if sec.is_setuid else ''}")
@@ -341,10 +339,8 @@ class InteractiveTUI:
                 content_lines.append("Environment inaccessible (Permission Denied or empty).")
 
         for idx, line in enumerate(content_lines[:max_y - 4]):
-            try:
+            with contextlib.suppress(curses.error):
                 stdscr.addstr(3 + idx, 1, line[:max_x - 2])
-            except curses.error:
-                pass
 
     def _draw_status_bar(self, stdscr: Any, max_y: int, max_x: int) -> None:
         try:

@@ -2,10 +2,14 @@
 Unified output dispatcher handling --json, --csv, --wide, --quiet, and rich terminal output.
 """
 
-import sys
-from typing import Any, List, Optional, Callable
+from typing import Any, Callable, List, Optional
+
+from pinspect.output.csv_out import (
+    export_files_csv,
+    export_processes_csv,
+    export_sockets_csv,
+)
 from pinspect.output.json_out import to_json
-from pinspect.output.csv_out import export_processes_csv, export_files_csv, export_sockets_csv
 
 
 class OutputDispatcher:

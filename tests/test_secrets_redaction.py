@@ -3,10 +3,10 @@ Unit tests for secret detection and redaction in environment variables.
 """
 
 import unittest
+
 from pinspect.utils.secrets import (
     is_secret_name,
     is_secret_value,
-    redact_value,
     process_environ,
 )
 

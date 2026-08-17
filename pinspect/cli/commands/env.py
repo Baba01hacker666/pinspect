@@ -2,15 +2,16 @@
 'pinspect env <PID>' command implementation.
 """
 
-from typing import Optional, Dict
-from rich.table import Table
+from typing import Dict, Optional
+
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from pinspect.collector.procfs import ProcFS
 from pinspect.output.formatter import OutputDispatcher
+from pinspect.ui.theme import COLOR_HEADER, console
 from pinspect.utils.secrets import process_environ
-from pinspect.ui.theme import console, COLOR_HEADER
 
 
 def handle_env(

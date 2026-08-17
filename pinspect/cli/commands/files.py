@@ -2,10 +2,10 @@
 'pinspect files <PID>' command implementation.
 """
 
-from typing import Optional, List
-from pinspect.collector.procfs import ProcFS
+from typing import Optional
+
 from pinspect.collector.filesystem import FilesystemCollector
-from pinspect.model.filesystem import FileDescriptorInfo
+from pinspect.collector.procfs import ProcFS
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.table import render_files_table
 from pinspect.ui.theme import console

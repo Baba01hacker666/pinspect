@@ -3,8 +3,9 @@
 """
 
 from typing import Optional
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.collector.security import SecurityCollector
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.detail import render_process_detail
@@ -24,13 +25,8 @@ def handle_show(
     sec_collector = SecurityCollector(procfs)
     dispatcher = output_dispatcher or OutputDispatcher()
 
-    # Link parents and ancestry
-    procs = collector.collect_all_processes(deep=True)
-    pinfo = next((p for p in procs if p.pid == pid), None)
-
-    if not pinfo:
-        # Try direct read
-        pinfo = collector.collect_process(pid, deep=True)
+    # Collect the target and its ancestors directly (avoids scanning all PIDs)
+    pinfo = collector.collect_process_with_ancestry(pid, deep=True)
 
     if not pinfo:
         if not dispatcher.quiet_mode:

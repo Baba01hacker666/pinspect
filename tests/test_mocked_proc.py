@@ -4,15 +4,17 @@ Validates behavior across containers, security privileges, deleted files,
 permission boundaries, and SIEM/EDR JSON output.
 """
 
-import os
 import json
+import os
 import tempfile
 import unittest
-from pinspect.collector.procfs import ProcFS
-from pinspect.collector.process import ProcessCollector
-from pinspect.collector.security import SecurityCollector
-from pinspect.collector.network import NetworkCollector
+from typing import Optional
+
 from pinspect.collector.filesystem import FilesystemCollector
+from pinspect.collector.network import NetworkCollector
+from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
+from pinspect.collector.security import SecurityCollector
 from pinspect.output.json_out import to_json
 
 
@@ -114,8 +116,8 @@ class TestComprehensiveMockedProc(unittest.TestCase):
         caps_eff: str = "0000000000000000",
         nnp: int = 0,
         seccomp: int = 0,
-        ns_map: dict = None,
-        fds: list = None,
+        ns_map: Optional[dict] = None,
+        fds: Optional[list] = None,
     ):
         pdir = os.path.join(self.proc_root, str(pid))
         os.makedirs(pdir, exist_ok=True)

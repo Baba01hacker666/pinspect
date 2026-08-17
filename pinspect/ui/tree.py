@@ -3,10 +3,12 @@ Process tree and ancestry visualizer.
 """
 
 from typing import Dict, List, Optional, Set
-from rich.tree import Tree
+
 from rich.text import Text
-from pinspect.model.process import ProcessInfo, ProcessAncestryNode
-from pinspect.ui.theme import console, Theme, COLOR_PID, COLOR_COMM, COLOR_CMD
+from rich.tree import Tree
+
+from pinspect.model.process import ProcessAncestryNode, ProcessInfo
+from pinspect.ui.theme import Theme, console
 from pinspect.utils.formatting import truncate_str
 
 
@@ -20,8 +22,7 @@ def _build_node_label(p: ProcessInfo, highlight_pid: Optional[int] = None) -> Te
     text.append(f"[{p.pid}] ", style=pid_style)
 
     # Process Name
-    name_style = "bold white" if is_target else "bold white"
-    text.append(f"{p.name} ", style=name_style)
+    text.append(f"{p.name} ", style="bold white")
 
     # User
     user_style = "bold yellow" if p.creds.user == "root" else "green"
@@ -67,18 +68,16 @@ def render_process_tree(
 
     # Determine root PIDs to start tree from
     roots: List[ProcessInfo] = []
-    if root_pid is not None:
-        if root_pid in proc_map:
-            roots = [proc_map[root_pid]]
-        else:
-            console.print(f"[bold red]PID {root_pid} not found.[/bold red]")
-            return
+    if root_pid is not None and root_pid in proc_map:
+        roots = [proc_map[root_pid]]
+    elif root_pid is not None:
+        console.print(f"[bold red]PID {root_pid} not found.[/bold red]")
+        return
     else:
         # Standard roots: processes whose PPID is 0 or PPID not present in proc_map
         for p in processes:
-            if p.ppid == 0 or p.ppid not in proc_map or p.pid == 1 or p.pid == 2:
-                if p not in roots:
-                    roots.append(p)
+            if (p.ppid == 0 or p.ppid not in proc_map or p.pid == 1 or p.pid == 2) and p not in roots:
+                roots.append(p)
 
         # Fallback if no clean root: find minimum PIDs
         if not roots and processes:

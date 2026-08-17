@@ -3,11 +3,12 @@
 """
 
 from typing import Optional
-from pinspect.collector.procfs import ProcFS
+
 from pinspect.collector.process import ProcessCollector
+from pinspect.collector.procfs import ProcFS
 from pinspect.output.formatter import OutputDispatcher
-from pinspect.ui.tree import render_ancestry_chain
 from pinspect.ui.theme import console
+from pinspect.ui.tree import render_ancestry_chain
 
 
 def handle_ancestry(
