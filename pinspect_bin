@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""
+pinspect executable entry point.
+"""
+import sys
+import os
+
+# Add local directory to sys.path if not installed
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from pinspect.cli.main import main
+
+if __name__ == "__main__":
+    sys.exit(main())
