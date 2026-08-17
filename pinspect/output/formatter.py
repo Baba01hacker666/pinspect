@@ -47,7 +47,8 @@ class OutputDispatcher:
             elif csv_type == "sockets" and isinstance(data, list):
                 print(export_sockets_csv(data), end="")
             else:
-                print(to_json(data))
+                # Never silently emit a different format than the user asked for
+                raise ValueError("CSV output is not supported for this command; use --json or default output")
             return
 
         if self.quiet_mode:

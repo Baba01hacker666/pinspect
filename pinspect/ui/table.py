@@ -59,7 +59,7 @@ def render_process_table(
     table.add_column("RSS", justify="right", no_wrap=True, width=8)
     table.add_column("THR", justify="right", style="dim", no_wrap=True, width=4)
     table.add_column("ORIGIN / SERVICE", justify="left", no_wrap=True, max_width=22)
-    table.add_column("COMMAND", justify="left", overflow="ellipsis")
+    table.add_column("COMMAND", justify="left", overflow="fold" if wide else "ellipsis")
 
     for p in processes:
         # State styling

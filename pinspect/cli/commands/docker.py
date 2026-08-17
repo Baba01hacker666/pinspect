@@ -59,7 +59,11 @@ def handle_docker(
         name = details.name if details else p.cgroup.container_name
         runtime = p.cgroup.container_runtime
 
-        if container_id and (not cid or container_id.lower() not in cid.lower()):
+        # Match either a short prefix or a full-length container ID
+        if container_id and (
+            not cid
+            or not (container_id.lower() in cid.lower() or cid.lower() in container_id.lower())
+        ):
             continue
         if container_name and (not name or container_name.lower() not in name.lower()):
             continue

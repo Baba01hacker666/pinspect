@@ -184,6 +184,11 @@ class TestCLICommands(unittest.TestCase):
         rc = main(["--proc-root", self.proc_root, "grep", "["])
         self.assertEqual(rc, 1)
 
+    def test_csv_not_supported_returns_error(self):
+        # show --csv must fail cleanly instead of silently emitting JSON
+        rc = main(["--proc-root", self.proc_root, "show", "100", "--csv"])
+        self.assertEqual(rc, 1)
+
     def test_docker_command(self):
         # PID 200 runs inside a Docker container; nginx (100) does not
         docker_cgroup = "0::/docker/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n"
@@ -222,6 +227,14 @@ class TestCLICommands(unittest.TestCase):
         f = io.StringIO()
         with redirect_stdout(f):
             rc = main(["--proc-root", self.proc_root, "docker", "--runtime", "docker", "--quiet"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(f.getvalue().strip(), "200")
+
+        # Full-length 64-char container ID must match the stored short id
+        full_id = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "docker", "--id", full_id, "--quiet"])
         self.assertEqual(rc, 0)
         self.assertEqual(f.getvalue().strip(), "200")
 

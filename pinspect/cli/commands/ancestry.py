@@ -21,8 +21,8 @@ def handle_ancestry(
     collector = ProcessCollector(procfs)
     dispatcher = output_dispatcher or OutputDispatcher()
 
-    processes = collector.collect_all_processes(deep=False)
-    pinfo = next((p for p in processes if p.pid == pid), None)
+    # Collect only the target and its ancestors instead of scanning all PIDs
+    pinfo = collector.collect_process_with_ancestry(pid, deep=False)
 
     if not pinfo:
         if not dispatcher.quiet_mode:
