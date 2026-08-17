@@ -2,7 +2,35 @@
 
 > **Fast, deep Linux process inspection and forensic intelligence tool that goes far beyond `ps aux`.**
 
+[![PyPI version](https://img.shields.io/pypi/v/pinspect-cli.svg)](https://pypi.org/project/pinspect-cli/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pinspect-cli.svg)](https://pypi.org/project/pinspect-cli/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 `pinspect` is an all-in-one terminal tool designed for systems engineers, SREs, and security investigators. It collects deep, actionable intelligence about running processes directly from native Linux `/proc` and kernel interfaces with zero external command dependencies, low overhead, graceful error recovery, and rich terminal and SIEM/EDR output formats.
+
+---
+
+## 📦 Installation
+
+Install directly from **PyPI**:
+
+```bash
+pip install pinspect-cli
+```
+
+Or install with `pipx` (isolated environment):
+
+```bash
+pipx install pinspect-cli
+```
+
+Or run from source:
+
+```bash
+git clone https://github.com/Baba01hacker666/pinspect.git
+cd pinspect
+pip install -e .
+```
 
 ---
 
@@ -16,22 +44,6 @@
 - **Process Hierarchy Tree**: Visualizes process trees with color-coded states, CPU/memory stats, container badges, and ancestry lineages.
 - **Interactive TUI**: Built-in interactive dashboard with live filtering, sortable columns, and detailed multi-tab views.
 - **SIEM / EDR Formats**: Structured JSON output (`--json`), CSV export (`--csv`), wide (`--wide`), and quiet mode (`--quiet`).
-
----
-
-## 🚀 Installation & Quick Start
-
-```bash
-# Clone repository
-git clone https://github.com/Baba01hacker666/pinspect.git
-cd pinspect
-
-# Symlink or install
-ln -sf /root/Procsight/pinspect_bin /usr/local/bin/pinspect
-
-# Or run directly via Python
-python3 -m pinspect --help
-```
 
 ---
 
@@ -194,4 +206,22 @@ Comprehensive test suite with full mocked `/proc` filesystem fixtures:
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
+```
+
+---
+
+## 📜 Publishing to PyPI
+
+To publish a new release to PyPI:
+
+```bash
+# 1. Build distribution archives
+rm -rf dist/
+python3 -m build
+
+# 2. Verify with twine
+twine check dist/*
+
+# 3. Upload to PyPI
+twine upload dist/*
 ```

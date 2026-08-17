@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="pinspect",
+    name="pinspect-cli",
     version="1.0.0",
     description="Fast Linux process-intelligence CLI tool that goes far beyond ps aux",
     author="Antigravity",

@@ -1,0 +1,59 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "pinspect-cli"
+version = "1.0.0"
+description = "Fast Linux process-intelligence CLI tool that goes far beyond ps aux"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Baba01hacker666" }
+]
+keywords = [
+    "linux",
+    "procfs",
+    "process",
+    "cli",
+    "security",
+    "forensics",
+    "tui",
+    "edr",
+    "siem",
+    "system-monitoring",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Security",
+]
+dependencies = [
+    "rich>=12.0.0",
+]
+
+[project.scripts]
+pinspect = "pinspect.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/Baba01hacker666/pinspect"
+Repository = "https://github.com/Baba01hacker666/pinspect"
+Issues = "https://github.com/Baba01hacker666/pinspect/issues"
+
+[tool.flit.module]
+name = "pinspect"
