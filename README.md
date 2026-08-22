@@ -250,20 +250,3 @@ Comprehensive test suite with full mocked `/proc` filesystem fixtures:
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 
----
-
-## 📜 Publishing to PyPI
-
-To publish a new release to PyPI:
-
-```bash
-# 1. Build distribution archives
-rm -rf dist/
-python3 -m build
-
-# 2. Verify with twine
-twine check dist/*
-
-# 3. Upload to PyPI
-twine upload dist/*
-```
