@@ -81,4 +81,6 @@ def handle_grep(
         csv_type="process",
         quiet_extractor=lambda procs: [str(p.pid) for p in procs],
     )
-    return 0
+    # Follow grep conventions: exit 1 when nothing matched so scripts can
+    # branch on the result.
+    return 0 if results else 1

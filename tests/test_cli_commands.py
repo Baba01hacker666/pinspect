@@ -157,14 +157,16 @@ class TestCLICommands(unittest.TestCase):
         f = io.StringIO()
         with redirect_stdout(f):
             rc = main(["--proc-root", self.proc_root, "grep", "daemon", "--name", "--quiet"])
-        self.assertEqual(rc, 0)
+        # No match under the restricted scope: exit code 1
+        self.assertEqual(rc, 1)
         self.assertEqual(f.getvalue().strip(), "")
 
     def test_grep_user_filter(self):
         f = io.StringIO()
         with redirect_stdout(f):
             rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--user", "1000", "--quiet"])
-        self.assertEqual(rc, 0)
+        # No match: follow grep convention of exit code 1
+        self.assertEqual(rc, 1)
         self.assertEqual(f.getvalue().strip(), "")
 
         f = io.StringIO()
@@ -172,6 +174,13 @@ class TestCLICommands(unittest.TestCase):
             rc = main(["--proc-root", self.proc_root, "grep", "nginx", "--user", "root", "--quiet"])
         self.assertEqual(rc, 0)
         self.assertEqual(f.getvalue().strip(), "100")
+
+    def test_grep_no_match_exit_code(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "grep", "does-not-exist-xyz", "--quiet"])
+        self.assertEqual(rc, 1)
+        self.assertEqual(f.getvalue().strip(), "")
 
     def test_grep_json(self):
         f = io.StringIO()
@@ -188,6 +197,21 @@ class TestCLICommands(unittest.TestCase):
         # show --csv must fail cleanly instead of silently emitting JSON
         rc = main(["--proc-root", self.proc_root, "show", "100", "--csv"])
         self.assertEqual(rc, 1)
+
+    def test_ps_survives_corrupt_proc_entry(self):
+        # A malformed /proc/<pid>/stat for one PID must not abort the listing;
+        # the remaining processes still appear (warning goes to stderr only).
+        self._make_proc(300, 1, "victim", b"victim\x00")
+        with open(os.path.join(self.proc_root, "300", "stat"), "w") as f:
+            f.write("this is not a valid stat line")
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            rc = main(["--proc-root", self.proc_root, "ps", "--quiet"])
+        self.assertEqual(rc, 0)
+        pids = set(f.getvalue().split())
+        self.assertIn("100", pids)
+        self.assertNotIn("300", pids)
 
     def test_docker_command(self):
         # PID 200 runs inside a Docker container; nginx (100) does not

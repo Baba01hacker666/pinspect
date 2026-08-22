@@ -4,7 +4,9 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "pinspect-cli"
-version = "1.0.2"
+# Version lives solely in pinspect/__init__.py (__version__) and is read
+# dynamically at build time by flit.
+dynamic = ["version"]
 description = "Fast Linux process-intelligence CLI and forensics tool that goes far beyond ps aux"
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -3,6 +3,7 @@ Process collector aggregating procfs metadata into ProcessInfo models.
 """
 
 import os
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
@@ -60,12 +61,24 @@ class ProcessCollector:
         if not pids:
             return []
 
-        # Read processes (using thread pool for parallelism on large systems)
+        # Read processes (using thread pool for parallelism on large systems).
+        # A single unreadable or malformed /proc entry must never abort the
+        # whole listing, so failures are logged to stderr and skipped.
+        def _safe_collect(pid: int) -> Optional[ProcessInfo]:
+            try:
+                return self.collect_process(pid, deep=deep)
+            except Exception as exc:
+                print(
+                    f"pinspect: warning: failed to inspect PID {pid}: {exc}",
+                    file=sys.stderr,
+                )
+                return None
+
         if len(pids) > 1 and workers > 1:
             with ThreadPoolExecutor(max_workers=min(workers, len(pids))) as executor:
-                procs = list(executor.map(lambda pid: self.collect_process(pid, deep=deep), pids))
+                procs = list(executor.map(_safe_collect, pids))
         else:
-            procs = [self.collect_process(pid, deep=deep) for pid in pids]
+            procs = [_safe_collect(pid) for pid in pids]
 
         valid_procs = [p for p in procs if p is not None]
 
@@ -157,7 +170,7 @@ class ProcessCollector:
         starttime_ticks = parsed_stat.get("starttime", 0)
         start_seconds_after_boot = starttime_ticks / clk_tck
         now = time.time()
-        
+
         # Approximate start epoch
         boot_epoch = now - uptime
         start_epoch = boot_epoch + start_seconds_after_boot

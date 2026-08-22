@@ -182,6 +182,9 @@ pinspect grep java --user 1000
 # Machine-readable output
 pinspect grep nginx --json
 pinspect grep nginx --quiet
+
+# Scripting: exits 0 when at least one process matched, 1 otherwise
+pinspect grep nginx --quiet && echo "nginx is running"
 ```
 
 ### 11. Containerized Processes Only (`pinspect docker`)
