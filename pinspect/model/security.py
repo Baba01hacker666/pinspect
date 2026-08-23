@@ -4,7 +4,10 @@ Security metadata and observations data models.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
+
+if TYPE_CHECKING:
+    from pinspect.model.risk import RiskInfo
 
 
 class SeccompMode(Enum):
@@ -95,3 +98,6 @@ class SecurityInfo:
     
     # Observations list
     observations: List[SecurityObservation] = field(default_factory=list)
+
+    # Heuristic risk assessment (populated when risk scoring is enabled)
+    risk: Optional["RiskInfo"] = None

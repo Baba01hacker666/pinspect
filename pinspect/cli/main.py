@@ -14,6 +14,7 @@ from pinspect.cli.commands.docker import handle_docker
 from pinspect.cli.commands.env import handle_env
 from pinspect.cli.commands.files import handle_files
 from pinspect.cli.commands.grep import handle_grep
+from pinspect.cli.commands.maps import handle_maps
 from pinspect.cli.commands.namespaces import handle_namespaces
 from pinspect.cli.commands.network import handle_network
 from pinspect.cli.commands.ps import handle_ps
@@ -22,6 +23,7 @@ from pinspect.cli.commands.show import handle_show
 from pinspect.cli.commands.tree import handle_tree
 from pinspect.cli.commands.tui import handle_tui
 from pinspect.output.formatter import OutputDispatcher
+from pinspect.utils.formatting import parse_duration
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     ps_parser.add_argument("--sort", choices=["cpu", "mem", "pid", "user", "name", "age"], default="cpu", help="Sort column (default: cpu)")
     ps_parser.add_argument("--asc", dest="reverse", action="store_false", default=True, help="Sort in ascending order instead of descending")
     ps_parser.add_argument("--limit", type=int, help="Limit number of output processes")
+    ps_parser.add_argument(
+        "--since",
+        type=parse_duration,
+        metavar="DURATION",
+        help="Only show processes started within this window (e.g. 30s, 10m, 2h, 1d)",
+    )
 
     # 2. 'tree' subcommand
     tree_parser = subparsers.add_parser("tree", help="Display process hierarchy tree", parents=[common_parser])
@@ -102,6 +110,10 @@ def build_parser() -> argparse.ArgumentParser:
     # 9. 'namespaces' subcommand
     ns_parser = subparsers.add_parser("namespaces", help="Inspect Linux namespace membership and isolation", parents=[common_parser])
     ns_parser.add_argument("pid", type=int, help="Target process PID")
+
+    # 9b. 'maps' subcommand
+    maps_parser = subparsers.add_parser("maps", help="Inspect memory mappings with injection / fileless-execution indicators", parents=[common_parser])
+    maps_parser.add_argument("pid", type=int, help="Target process PID")
 
     # 10. 'security' subcommand
     sec_parser = subparsers.add_parser("security", help="Inspect Linux capabilities, Seccomp, NoNewPrivs, LSM, and file integrity", parents=[common_parser])
@@ -184,6 +196,7 @@ def _run_command(command, parsed_args, dispatcher, proc_root):
             sort_by=parsed_args.sort,
             reverse=parsed_args.reverse,
             limit=parsed_args.limit,
+            since_seconds=parsed_args.since,
             output_dispatcher=dispatcher,
         )
 
@@ -248,6 +261,13 @@ def _run_command(command, parsed_args, dispatcher, proc_root):
 
     elif command == "namespaces":
         return handle_namespaces(
+            pid=parsed_args.pid,
+            proc_root=proc_root,
+            output_dispatcher=dispatcher,
+        )
+
+    elif command == "maps":
+        return handle_maps(
             pid=parsed_args.pid,
             proc_root=proc_root,
             output_dispatcher=dispatcher,

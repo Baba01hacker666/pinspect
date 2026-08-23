@@ -8,10 +8,30 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from pinspect.collector.maps import MapsCollector
+from pinspect.collector.process import ProcessCollector
 from pinspect.collector.procfs import ProcFS
+from pinspect.collector.risk import RiskCollector
 from pinspect.collector.security import SecurityCollector
+from pinspect.model.risk import RiskInfo
 from pinspect.output.formatter import OutputDispatcher
 from pinspect.ui.theme import console
+
+
+def _collect_process_for_risk(procfs: ProcFS, pid: int):
+    """Best-effort single-PID process metadata for risk scoring."""
+    try:
+        return ProcessCollector(procfs).collect_process(pid, deep=False)
+    except Exception:
+        return None
+
+
+_LEVEL_STYLES = {
+    "LOW": "green",
+    "MEDIUM": "yellow",
+    "HIGH": "bold red",
+    "CRITICAL": "bold white on red",
+}
 
 
 def handle_security(
@@ -23,6 +43,8 @@ def handle_security(
     """Perform security and privilege inspection for PID."""
     procfs = ProcFS(proc_root)
     sec_collector = SecurityCollector(procfs)
+    maps_collector = MapsCollector(procfs)
+    risk_collector = RiskCollector()
     dispatcher = output_dispatcher or OutputDispatcher()
 
     if not procfs.exists(pid):
@@ -31,6 +53,16 @@ def handle_security(
         return 1
 
     security = sec_collector.collect(pid, compute_hash=compute_hash)
+    maps_report = maps_collector.collect(pid)
+    pinfo_for_risk = _collect_process_for_risk(procfs, pid)
+    if pinfo_for_risk is not None:
+        security.risk = risk_collector.assess(
+            pinfo_for_risk,
+            security=security,
+            maps_report=maps_report,
+        )
+    else:
+        security.risk = RiskInfo(pid=pid)
 
     def render_security_view() -> None:
         table = Table(box=None, show_header=False, pad_edge=False)
@@ -92,9 +124,37 @@ def handle_security(
 
         console.print(Panel(table, title=f"🛡️ Process Security Intelligence - PID {pid}", border_style="magenta"))
 
+        # Risk assessment panel
+        risk = security.risk
+        if risk is not None:
+            risk_table = Table(box=None, show_header=False, pad_edge=False)
+            risk_table.add_column("Key", style="bold cyan", width=24)
+            risk_table.add_column("Value", style="white")
+
+            level_style = _LEVEL_STYLES.get(risk.level, "white")
+            risk_table.add_row("Risk Score:", f"[{level_style}]{risk.score}/100 ({risk.level})[/]")
+
+            if risk.flags:
+                flag_lines = Text()
+                for flag in sorted(risk.flags, key=lambda f: -f.weight):
+                    style = _LEVEL_STYLES.get(flag.severity, "white")
+                    flag_lines.append(f"  ● [{flag.code}] {flag.title}", style=style)
+                    flag_lines.append(f" (+{flag.weight})\n", style="dim")
+                    flag_lines.append(f"    {flag.detail}\n", style="white")
+                risk_table.add_row("Suspicion Flags:", flag_lines)
+            else:
+                risk_table.add_row("Suspicion Flags:", "[green]None — no suspicious indicators found[/green]")
+
+            border = "red" if risk.is_elevated else "green"
+            console.print(Panel(risk_table, title=f"🎯 Risk Assessment - PID {pid}", border_style=border))
+
     dispatcher.handle(
         data=security,
         rich_render_fn=render_security_view,
-        quiet_extractor=lambda s: [f"CAP_EFF={','.join(s.capabilities.effective)}", f"NNP={s.no_new_privs}"],
+        quiet_extractor=lambda s: [
+            f"CAP_EFF={','.join(s.capabilities.effective)}",
+            f"NNP={s.no_new_privs}",
+            f"RISK={s.risk.score if s.risk else 0}",
+        ],
     )
     return 0

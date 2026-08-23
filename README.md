@@ -40,6 +40,8 @@ pip install -e .
 - **Launch & Origin Intelligence**: Automatically detects whether a process originated from **systemd**, **cron**, **SSH**, an interactive **shell**, **Docker**, **Podman**, **Kubernetes**, a **supervisor** (e.g. `runsv`, `supervisord`), or the kernel. Resolves systemd service unit names, unit files on disk, and container IDs.
 - **Security & Privilege Forensics**: Decodes 64-bit Linux capability bitmasks (`CapEff`, `CapPrm`, `CapInh`, `CapBnd`, `CapAmb`) to named capabilities (`CAP_SYS_ADMIN`, `CAP_NET_RAW`), checks `NoNewPrivs`, Seccomp filters, AppArmor/SELinux contexts, SetUID/SetGID bits, executable SHA-256 hashes, and unlinked binary execution (`(deleted)` executables & memory mappings).
 - **Files & Sockets**: Inspects open file descriptors, target classification (regular files, pipes, unix sockets, network sockets, anon inodes), permissions, file size, deleted files held in memory, and system-wide/per-PID network connections.
+- **Heuristic Risk Scoring**: Every process gets a suspicion score (0–100) with explainable flags — deleted or memfd-backed executables, binaries staged in world-writable directories, RWX / anonymous executable memory regions (code injection evidence), dangerous capabilities, unsandboxed root, unconfined LSM profiles.
+- **Memory Map Forensics**: `pinspect maps` dissects `/proc/<pid>/maps`, flagging W+X regions, anonymous executable mappings, memfd fileless payloads, and files deleted after being mapped.
 - **Secret Redaction**: `pinspect env` automatically discovers and masks sensitive secrets and credentials (`*_TOKEN`, `*_KEY`, `*_SECRET`, `*_PASSWORD`, `AWS_*`, `DATABASE_URL`, JWT tokens, and private keys).
 - **Built-in Grep**: `pinspect grep` searches running processes like grep — by program name, command-line arguments, executable path, or user — with highlighted matches and relevance-ranked results (name matches first).
 - **Container Process View**: `pinspect docker` lists only processes running inside containers (Docker, Podman, Kubernetes, CRI-O, LXC) with container ID, runtime, and name.
@@ -79,6 +81,10 @@ pinspect ps --deleted
 
 # Sort options (cpu, mem, pid, user, name, age)
 pinspect ps --sort mem --limit 10
+
+# Incident triage: only processes started in the last 10 minutes
+pinspect ps --since 10m
+pinspect ps --since 2h --sort pid --asc
 ```
 
 ### 2. Process Tree (`pinspect tree`)
@@ -95,9 +101,9 @@ pinspect tree --highlight 1234
 ```
 
 ### 3. Detailed Process Inspection (`pinspect show <PID>`)
-Displays comprehensive intelligence card for a single PID:
+Displays comprehensive intelligence card for a single PID, including the heuristic risk assessment:
 ```bash
-# Show identity, origin, CPU/mem stats, security, namespaces, ancestry
+# Show identity, origin, CPU/mem stats, security, namespaces, ancestry, risk score
 pinspect show 14847
 
 # Include SHA-256 binary hash
@@ -159,9 +165,12 @@ pinspect namespaces 14847
 ```
 
 ### 9. Security & Capability Forensics (`pinspect security <PID>`)
-Inspects Linux capabilities, Seccomp, NoNewPrivs, LSM, and file integrity:
+Inspects Linux capabilities, Seccomp, NoNewPrivs, LSM, and file integrity — plus a heuristic risk score with explainable suspicion flags:
 ```bash
 pinspect security 14847
+
+# Risk verdict in machine-readable form (risk.score / risk.level / risk.flags)
+pinspect security 14847 --json
 ```
 
 ### 10. Grep Processes (`pinspect grep <pattern>`)
@@ -204,7 +213,19 @@ pinspect docker --json
 pinspect docker --quiet
 ```
 
-### 12. Interactive TUI Mode (`pinspect tui`)
+### 12. Memory Maps Inspector (`pinspect maps <PID>`)
+Dissects `/proc/<pid>/maps` with forensic indicators for code injection and fileless execution:
+```bash
+# Full map table: RWX regions, anonymous exec mappings, memfd payloads,
+# and files deleted after being mapped are highlighted automatically
+pinspect maps 14847
+
+# Machine-readable output
+pinspect maps 14847 --json
+pinspect maps 14847 --quiet
+```
+
+### 13. Interactive TUI Mode (`pinspect tui`)
 Launches full-screen interactive dashboard:
 ```bash
 pinspect tui

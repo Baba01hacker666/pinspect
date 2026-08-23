@@ -3,6 +3,7 @@
 """
 
 import re
+import time
 from typing import List, Optional
 
 from pinspect.collector.network import NetworkCollector
@@ -28,12 +29,15 @@ def handle_ps(
     sort_by: str = "cpu",
     reverse: bool = True,
     limit: Optional[int] = None,
+    since_seconds: Optional[float] = None,
     output_dispatcher: Optional[OutputDispatcher] = None,
 ) -> int:
     """Execute process list command with filtering and formatting."""
     procfs = ProcFS(proc_root)
     collector = ProcessCollector(procfs)
     dispatcher = output_dispatcher or OutputDispatcher()
+
+    since_cutoff = (time.time() - since_seconds) if since_seconds is not None else None
 
     # If port or listen filter is requested, build socket inode lookup
     port_matching_pids = set()
@@ -80,6 +84,9 @@ def handle_ps(
             continue
 
         if (port_filter is not None or listen_only) and p.pid not in port_matching_pids:
+            continue
+
+        if since_cutoff is not None and p.start_time_epoch < since_cutoff:
             continue
 
         filtered.append(p)

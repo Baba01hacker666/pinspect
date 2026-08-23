@@ -9,6 +9,7 @@ from rich.table import Table
 from rich.text import Text
 
 from pinspect.model.process import ProcessInfo
+from pinspect.model.risk import RiskInfo
 from pinspect.model.security import SecurityInfo
 from pinspect.ui.theme import (
     Theme,
@@ -23,6 +24,7 @@ def render_process_detail(
     pinfo: ProcessInfo,
     security: Optional[SecurityInfo] = None,
     raw_environ: Optional[Dict[str, str]] = None,
+    risk: Optional[RiskInfo] = None,
 ) -> None:
     """Render full detailed inspection for a single process."""
     # 1. Identity & State Header
@@ -166,7 +168,29 @@ def render_process_detail(
 
         console.print(Panel(sec_table, title="🛡️ Security, Privileges & Capabilities", border_style="magenta"))
 
-    # 6. Ancestry Lineage
+    # 6. Risk Assessment
+    if risk is not None:
+        level_styles = {"LOW": "green", "MEDIUM": "yellow", "HIGH": "bold red", "CRITICAL": "bold white on red"}
+        risk_table = Table(box=None, show_header=False, pad_edge=False)
+        risk_table.add_column("Key", style="bold cyan", width=18)
+        risk_table.add_column("Value", style="white")
+
+        level_style = level_styles.get(risk.level, "white")
+        risk_table.add_row("Risk Score:", f"[{level_style}]{risk.score}/100 ({risk.level})[/]")
+        if risk.flags:
+            flag_text = Text()
+            for flag in sorted(risk.flags, key=lambda f: -f.weight):
+                style = level_styles.get(flag.severity, "white")
+                flag_text.append(f"  ● [{flag.code}] {flag.title}", style=style)
+                flag_text.append(f" (+{flag.weight})\n", style="dim")
+                flag_text.append(f"    {flag.detail}\n", style="white")
+            risk_table.add_row("Suspicion Flags:", flag_text)
+        else:
+            risk_table.add_row("Suspicion Flags:", "[green]None — no suspicious indicators found[/green]")
+
+        console.print(Panel(risk_table, title=f"🎯 Risk Assessment - PID {pinfo.pid}", border_style=("red" if risk.is_elevated else "green")))
+
+    # 7. Ancestry Lineage
     if pinfo.ancestry:
         ancestry_text = Text()
         chain_rev = list(reversed(pinfo.ancestry))
