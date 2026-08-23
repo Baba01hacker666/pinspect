@@ -385,17 +385,13 @@ class ProcessCollector:
             else:
                 # Parent might have exited or be inaccessible
                 comm = self.procfs.read_file(curr_ppid, "comm")
-                comm_str = ""
                 if comm:
-                    comm_str = comm.decode("utf-8", "replace") if isinstance(comm, bytes) else str(comm)
-                    comm_str = comm_str.strip()
-                if comm_str:
                     chain.append(
                         ProcessAncestryNode(
                             pid=curr_ppid,
                             ppid=0,
-                            name=comm_str,
-                            cmdline=comm_str,
+                            name=str(comm).strip(),
+                            cmdline=str(comm).strip(),
                             user="?",
                         )
                     )
