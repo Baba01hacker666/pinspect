@@ -163,24 +163,35 @@ class SecurityCollector:
         return res
 
     def _collect_lsm(self, pid: int, sec: SecurityInfo) -> None:
-        # AppArmor
+        # AppArmor (may live at attr/apparmor/current or the generic attr/current)
         aa_curr = self.procfs.read_file(pid, "attr", "apparmor", "current")
         if not aa_curr:
             aa_curr = self.procfs.read_file(pid, "attr", "current")
-        
+
         if aa_curr:
             aa_str = str(aa_curr).strip()
-            if aa_str and aa_str != "unconfined":
+            # AppArmor enforces/complains profiles may contain other chars but
+            # never a SELinux-style context. A colon-bearing value is a SELinux
+            # context UNLESS it ends with an AppArmor mode marker, in which case
+            # it is an AppArmor profile that happens to contain a colon.
+            is_apparmor_mode = aa_str.endswith((" (enforce)", " (complain)"))
+            if ":" in aa_str and not is_apparmor_mode:
+                sec.selinux_context = aa_str
+            elif aa_str and aa_str != "unconfined":
                 sec.apparmor_profile = aa_str
 
-        # SELinux / Smack
+        # SELinux has its own dedicated attr path; read it explicitly so the
+        # context is captured even on systems without AppArmor.
+        selinux = self.procfs.read_file(pid, "attr", "selinux", "current")
+        if selinux:
+            selinux_str = str(selinux).strip()
+            if selinux_str and selinux_str != "unconfined":
+                sec.selinux_context = selinux_str
+
+        # Smack label
         smack = self.procfs.read_file(pid, "attr", "smack", "current")
         if smack:
             sec.smack_label = str(smack).strip()
-
-        # Check if current is SELinux context
-        if aa_curr and ":" in str(aa_curr):
-            sec.selinux_context = str(aa_curr).strip()
 
     def _collect_exe_security(self, pid: int, sec: SecurityInfo, compute_hash: bool) -> None:
         exe_link = self.procfs.read_symlink(pid, "exe")

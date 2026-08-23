@@ -61,12 +61,19 @@ class ProcessCollector:
         if not pids:
             return []
 
+        # Sample the wall clock ONCE for the whole listing so every process
+        # shares the same reference point. collect_process() derives
+        # start_time_epoch / age from this, and a per-PID time.time() would
+        # let values drift across the (parallel) scan and make --since
+        # boundary checks inconsistent between processes.
+        now = time.time()
+
         # Read processes (using thread pool for parallelism on large systems).
         # A single unreadable or malformed /proc entry must never abort the
         # whole listing, so failures are logged to stderr and skipped.
         def _safe_collect(pid: int) -> Optional[ProcessInfo]:
             try:
-                return self.collect_process(pid, deep=deep)
+                return self.collect_process(pid, deep=deep, now=now)
             except Exception as exc:
                 print(
                     f"pinspect: warning: failed to inspect PID {pid}: {exc}",
@@ -104,7 +111,8 @@ class ProcessCollector:
         direct ancestors, which is far cheaper for single-PID commands on busy hosts.
         Returns None if the target process doesn't exist.
         """
-        pinfo = self.collect_process(pid, deep=deep)
+        now = time.time()
+        pinfo = self.collect_process(pid, deep=deep, now=now)
         if pinfo is None:
             return None
 
@@ -113,7 +121,7 @@ class ProcessCollector:
         seen = {pid}
         while curr and curr.ppid > 0 and curr.ppid not in seen:
             seen.add(curr.ppid)
-            parent = self.collect_process(curr.ppid, deep=False)
+            parent = self.collect_process(curr.ppid, deep=False, now=now)
             if parent is None:
                 break
             parent.children.append(curr.pid)
@@ -124,11 +132,18 @@ class ProcessCollector:
         self._resolve_ancestry_and_origin(pinfo, proc_by_pid)
         return pinfo
 
-    def collect_process(self, pid: int, deep: bool = True) -> Optional[ProcessInfo]:
+    def collect_process(
+        self,
+        pid: int,
+        deep: bool = True,
+        now: Optional[float] = None,
+    ) -> Optional[ProcessInfo]:
         """
         Collect process details for a single PID safely.
         Returns None if process doesn't exist or disappeared during read.
         """
+        if now is None:
+            now = time.time()
         # 1. Read /proc/<pid>/stat
         stat_line = self.procfs.read_file(pid, "stat")
         if not stat_line:
@@ -169,7 +184,6 @@ class ProcessCollector:
         clk_tck = get_clock_ticks()
         starttime_ticks = parsed_stat.get("starttime", 0)
         start_seconds_after_boot = starttime_ticks / clk_tck
-        now = time.time()
 
         # Approximate start epoch
         boot_epoch = now - uptime
@@ -371,13 +385,17 @@ class ProcessCollector:
             else:
                 # Parent might have exited or be inaccessible
                 comm = self.procfs.read_file(curr_ppid, "comm")
+                comm_str = ""
                 if comm:
+                    comm_str = comm.decode("utf-8", "replace") if isinstance(comm, bytes) else str(comm)
+                    comm_str = comm_str.strip()
+                if comm_str:
                     chain.append(
                         ProcessAncestryNode(
                             pid=curr_ppid,
                             ppid=0,
-                            name=str(comm).strip(),
-                            cmdline=str(comm).strip(),
+                            name=comm_str,
+                            cmdline=comm_str,
                             user="?",
                         )
                     )

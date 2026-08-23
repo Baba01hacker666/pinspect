@@ -47,6 +47,16 @@ def parse_port_hex(hex_str: str) -> int:
         return 0
 
 
+def _hexint_or_zero(value: str) -> int:
+    """Parse a hex integer, tolerating the '-' placeholder used by some
+    /proc/net rows (e.g. TIME_WAIT sockets emit 'tx_queue:rx_queue' as '-:00').
+    Returns 0 for non-hex values instead of raising."""
+    try:
+        return int(value, 16)
+    except (ValueError, TypeError):
+        return 0
+
+
 class NetworkCollector:
     """Parses network sockets from /proc/net and associates them with PIDs."""
 
@@ -162,8 +172,8 @@ class NetworkCollector:
                 remote_hex, remote_port_hex = parts[2].split(":")
                 state_hex = parts[3]
                 tx_rx = parts[4].split(":")
-                tx_q = int(tx_rx[0], 16) if len(tx_rx) > 0 else 0
-                rx_q = int(tx_rx[1], 16) if len(tx_rx) > 1 else 0
+                tx_q = _hexint_or_zero(tx_rx[0]) if len(tx_rx) > 0 else 0
+                rx_q = _hexint_or_zero(tx_rx[1]) if len(tx_rx) > 1 else 0
                 uid = int(parts[7])
                 inode = int(parts[9])
 

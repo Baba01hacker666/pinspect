@@ -41,9 +41,14 @@ class ProcessState(Enum):
 
     @classmethod
     def from_char(cls, char: str) -> "ProcessState":
-        char_upper = char.upper() if char else "?"
+        # Match case-sensitively. Linux stat encodes distinct states in
+        # different case (e.g. 'T' = stopped, 't' = traced/ptrace-stop,
+        # 'I' = idle kernel thread). Uppercasing would collapse 't' into
+        # 'T' and make ProcessState.TRACED unreachable.
+        if not char:
+            return cls.UNKNOWN
         for member in cls:
-            if member.value.upper() == char_upper:
+            if member.value == char:
                 return member
         return cls.UNKNOWN
 
